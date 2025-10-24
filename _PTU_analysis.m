@@ -469,9 +469,9 @@ If[MemberQ[images, "D1"], imgD1 = MatrixPlot[FGetFromPiezoScan["n1"+"n1pie", 1],
 If[MemberQ[images, "L1D2"], imgL1D2 = MatrixPlot[FGetFromPiezoScan["n2", 1], PlotLabel -> Style["L1D2", {14, Blue}], commonMatrixStyle];];
 If[MemberQ[images, "L2D1"], imgL2D1 = MatrixPlot[FGetFromPiezoScan["n1pie", 1], PlotLabel -> Style["L2D1", {14, Red}], commonMatrixStyle];];
 If[MemberQ[images, "L2D2"], imgL2D2 = MatrixPlot[FGetFromPiezoScan["n2pie", 1], PlotLabel -> Style["L2D2", {14, Blue}], commonMatrixStyle];];
-If[MemberQ[images, "L1D1"], imgL1D1 = MatrixPlot[FGetFromPiezoScan["n1pie", 1], PlotLabel -> Style["L1D1", {14, Red}], commonMatrixStyle];];
+If[MemberQ[images, "L1D1"], imgL1D1 = MatrixPlot[FGetFromPiezoScan["n1", 1], PlotLabel -> Style["L1D1", {14, Red}], commonMatrixStyle];];
 
-string = "File: " <> fileName <> "; active lasers: " <> StringRiffle[Keys@Select[KeyTake[{"485V", "485H", "560V", "640V", "640H"}][metadata], # == 1 &], ", "] <> "; Dimensions: " <> ToString@metadata["PixX"] <> " px \[Times]" <> ToString@metadata["PixY"] <> "; resolution: " <> ToString@Round[metadata["PixResol"], 0.001] <> " \[Micro]m/px; Dimensions: " <> ToString@Round[metadata["PixX"]*metadata["PixResol"], 0.1] <> " \[Micro]m \[Times]" <> ToString@Round[metadata["PixY"]*metadata["PixResol"], 0.1] <> "; dwell time: " <> ToString[metadata["TimePerPixel"]*1000] <> " \[Micro]s";
+string = "File: " <> fileName <> "; active lasers: " <> StringRiffle[Keys@Select[KeyTake[{"485V", "485H", "560V", "640V", "640H"}][metadata], # == 1 &], ", "] <> "; Dimensions: " <> ToString@metadata["PixX"] <> " px \[Times]" <> ToString@metadata["PixY"] <> " px; resolution: " <> ToString@Round[metadata["PixResol"], 0.001] <> " \[Micro]m/px; Dimensions: " <> ToString@Round[metadata["PixX"]*metadata["PixResol"], 0.1] <> " \[Micro]m \[Times]" <> ToString@Round[metadata["PixY"]*metadata["PixResol"], 0.1] <> " \[Micro]m; dwell time: " <> ToString[metadata["TimePerPixel"]*1000] <> " \[Micro]s";
 Print@string;
 
 row = Row[Symbol /@ ("img" <> # & /@ images), "  ", Frame -> True];
