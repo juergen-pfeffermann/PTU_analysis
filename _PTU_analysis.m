@@ -457,23 +457,23 @@ FTimeTrace[route, bin, {0, t1}, FOutput -> FGraph, PlotTheme -> "Detailed"]
 
 
 fImages[fileName_, images_List] := 
-Module[{metadata, commonMatrixStyle, grid, row, string, imgD1, imgD2, imgL1D2, imgL2D1, imgL2D2, imgL1D1},
+Module[{metadata, imgs, commonMatrixStyle, row, string, imgD1, imgD2, imgL1D2, imgL2D1, imgL2D2, imgL1D1},
 metadata = fSetupAnalysis[fileName];
 If[metadata == 0, Return[0]];
 (*Are we looking at an image, i.e. a multidimensional object?*)
 If[metadata["dimensions"] <= 1, Return[]];
 
+imgs = {};
 commonMatrixStyle = {LabelStyle -> Black, ImageSize -> 100*72/25.4, ColorFunction -> Hue, PlotLegends -> Automatic};
-If[MemberQ[images, "D2"], imgD2 = MatrixPlot[FGetFromPiezoScan["n2"+"n2pie", 1], PlotLabel -> Style["D2", {14, Blue}], commonMatrixStyle];];
-If[MemberQ[images, "D1"], imgD1 = MatrixPlot[FGetFromPiezoScan["n1"+"n1pie", 1], PlotLabel -> Style["D1", {14, Red}], commonMatrixStyle];];
-If[MemberQ[images, "L1D2"], imgL1D2 = MatrixPlot[FGetFromPiezoScan["n2", 1], PlotLabel -> Style["L1D2", {14, Blue}], commonMatrixStyle];];
-If[MemberQ[images, "L2D1"], imgL2D1 = MatrixPlot[FGetFromPiezoScan["n1pie", 1], PlotLabel -> Style["L2D1", {14, Red}], commonMatrixStyle];];
-If[MemberQ[images, "L2D2"], imgL2D2 = MatrixPlot[FGetFromPiezoScan["n2pie", 1], PlotLabel -> Style["L2D2", {14, Blue}], commonMatrixStyle];];
-If[MemberQ[images, "L1D1"], imgL1D1 = MatrixPlot[FGetFromPiezoScan["n1", 1], PlotLabel -> Style["L1D1", {14, Red}], commonMatrixStyle];];
+If[MemberQ[images, "D2"], AppendTo[imgs, MatrixPlot[FGetFromPiezoScan["n2"+"n2pie", 1], PlotLabel -> Style["D2", {14, Blue}], commonMatrixStyle];]];
+If[MemberQ[images, "D1"], AppendTo[imgs, MatrixPlot[FGetFromPiezoScan["n1"+"n1pie", 1], PlotLabel -> Style["D1", {14, Red}], commonMatrixStyle];]];
+If[MemberQ[images, "L1D2"], AppendTo[imgs, MatrixPlot[FGetFromPiezoScan["n2", 1], PlotLabel -> Style["L1D2", {14, Blue}], commonMatrixStyle];]];
+If[MemberQ[images, "L2D1"], AppendTo[imgs, MatrixPlot[FGetFromPiezoScan["n1pie", 1], PlotLabel -> Style["L2D1", {14, Red}], commonMatrixStyle];]];
+If[MemberQ[images, "L2D2"], AppendTo[imgs, MatrixPlot[FGetFromPiezoScan["n2pie", 1], PlotLabel -> Style["L2D2", {14, Blue}], commonMatrixStyle];]];
+If[MemberQ[images, "L1D1"], AppendTo[imgs, MatrixPlot[FGetFromPiezoScan["n1", 1], PlotLabel -> Style["L1D1", {14, Red}], commonMatrixStyle];]];
 
 string = "File: " <> fileName <> "; active lasers: " <> StringRiffle[Keys@Select[KeyTake[{"485V", "485H", "560V", "640V", "640H"}][metadata], # == 1 &], ", "] <> "; Dimensions: " <> ToString@metadata["PixX"] <> " px \[Times]" <> ToString@metadata["PixY"] <> " px; resolution: " <> ToString@Round[metadata["PixResol"], 0.001] <> " \[Micro]m/px; Dimensions: " <> ToString@Round[metadata["PixX"]*metadata["PixResol"], 0.1] <> " \[Micro]m \[Times]" <> ToString@Round[metadata["PixY"]*metadata["PixResol"], 0.1] <> " \[Micro]m; dwell time: " <> ToString[metadata["TimePerPixel"]*1000] <> " \[Micro]s";
 Print@string;
 
-row = Row[Symbol /@ ("img" <> # & /@ images), "  ", Frame -> True];
-row
+Row[imgs, "  ", Frame -> True]
 ];
