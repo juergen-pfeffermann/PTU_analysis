@@ -208,6 +208,7 @@ If[correlation == "AC2211FFCS", AC2211FFCS = fGetCCFFCS[D2, D2, chsL1, chsL1];];
 If[correlation == "AC1122FFCS", AC1122FFCS = fGetCCFFCS[D1, D1, chsL2, chsL2];];
 If[correlation == "CC1221FFCS", CC1221FFCS = fGetCCFFCS[D1, D2, chsL2, chsL1];];
 If[correlation == "CC2112FFCS", CC2112FFCS = fGetCCFFCS[D2, D1, chsL1, chsL2];];
+If[correlation == "L1D12xL2D1", CC2112FFCS = fGetCCFFCS[D12, D1, chsL1, chsL2];];
 
 corrdata = Symbol[correlation];
 CCtotal = corrdata[[1]];
