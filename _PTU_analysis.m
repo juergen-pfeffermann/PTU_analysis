@@ -1,8 +1,7 @@
 FindFile["Fretica`"];
 Needs["Fretica`"];
 
-
-fSetupAnalysis[fileName_] := 
+fSetupAnalysis[fileName_, boolHisto_: False] := 
 Module[{metadata, D1, D2, D12, activeLasers, channelsPerPulse, chsL1, chsL2, chsAll},
 If[Check[FOpenTTTR[fileName], $Failed] === $Failed, Return[0]];
 
@@ -72,7 +71,7 @@ AssociateTo[metadata, {
 "chsAll" -> chsAll
 }]];
 
-AssociateTo[metadata, fGetPhotonData[metadata]];
+AssociateTo[metadata, fGetPhotonData[metadata, boolHisto]];
 
 (* Image metadata *)
 If[metadata["dimensions"] <= 1, Return[metadata]];
@@ -83,15 +82,15 @@ AssociateTo[metadata, {
 "PixResol" -> FGetFromHeader["ImgHdr_PixResol"],
 "MaxFrames" -> FGetFromHeader["ImgHdr_MaxFrames"],
 "TimePerPixel" -> FGetFromHeader["ImgHdr_TimePerPixel"],
-"BiDirect" -> FGetFromHeader["ImgHdr_BiDirect"]
+"BiDirect" -> FGetFromHeader["ImgHdr_BiDirect"],
+"nFrames" -> FNumberOfScanImageFrames[]
 }];
 
 metadata
 ];
 
-
 SetAttributes[fGetPhotonData, HoldFirst];
-fGetPhotonData[metadata_] := 
+fGetPhotonData[metadata_, boolHisto_] := 
 Module[{startTime, stopTime, hD1, cD1, hD2, cD2, hD1L1, cD1L1, hD1L2, cD1L2, hD2L1, cD2L1, hD2L2, cD2L2, assSTD, assPIE, assoc},
 If[metadata === 0, Return[0]];
 
@@ -118,30 +117,27 @@ cD2L2 = Total[hD2L2[[All, 2]]];
 ];
 
 assSTD = Association[{
-(*"hD1"->hD1,*)
 "cD1" -> cD1,
 "crD1" -> cD1/(stopTime - startTime),
-(*"hD2"->hD2,*)
 "cD2" -> cD2,
 "crD2" -> cD2/(stopTime - startTime),
-"crD2L2" -> cD2L2/(stopTime - startTime),
 "startTime" -> startTime,
 "stopTime" -> stopTime,
 "time" -> stopTime - startTime}];
 
+If[boolHisto, AssociateTo[assSTD,{"hD1"->hD1,"hD2"->hD2}]];
+
 If[metadata["pulseCfg"] == PIE,
 assPIE = Association[{
-(*"hD1L1"->hD1L1,*)
 "cD1L1" -> cD1L1,
 "crD1L1" -> cD1L1/(stopTime - startTime),
-(*"hD1L2"->hD1L2,*)
 "cD1L2" -> cD1L2,
 "crD1L2" -> cD1L2/(stopTime - startTime),
-(*"hD2L1"->hD2L1,*)
 "cD2L1" -> cD2L1,
 "crD2L1" -> cD2L1/(stopTime - startTime),
-(*"hD2L2"->hD2L2,*)
-"cD2L2" -> cD2L2}];
+"cD2L2" -> cD2L2,
+"crD2L2" -> cD2L2/(stopTime - startTime)}];
+If[boolHisto, AssociateTo[assPIE,{"hD1L1"->hD1L1, "hD1L2"->hD1L2, "hD2L1"->hD2L1, "hD2L2"->hD2L2}]];
 ];
 
 If[metadata["pulseCfg"] == PIE,
@@ -152,7 +148,6 @@ assoc = assSTD];
 
 assoc
 ];
-
 
 SetAttributes[fGetCorrData, HoldFirst];
 fGetCorrData[metadata_, log10taumin_, interval_, correlation_] := fGetCorrData[metadata, log10taumin, 0., interval, correlation];
@@ -231,7 +226,6 @@ correlation -> CCinterval,
 "intervals" -> intervals}]
 ];
 
-
 SetAttributes[{fFitCorrDataWeighted, fFitCorrDataUnweighted}, HoldFirst];
 fFitCorrDataWeighted[metadata_, kappa_Real, fitModel_String] := fFitCorrDataWeighted[metadata, kappa, fitModel, True];
 fFitCorrDataUnweighted[metadata_, kappa_Real, fitModel_String] := fFitCorrDataWeighted[metadata, kappa, fitModel, False];
@@ -275,10 +269,9 @@ AssociateTo[metadata, {
 ClearAll[SP, fitdata, params, fitparams];
 ];
 
-
 (* 
 Correlation fit models, parameters, constraints and parameter guesses
-P. Schwille, in Fluorescence Correlation Spectroscopy, F. P. Sch\[ADoubleDot]fer, J. P. Toennies, W. Zinth, R. Rigler, E. S. Elson, Eds. (Springer Berlin Heidelberg, Berlin, Heidelberg, 2001), vol. 65, pp.\[NonBreakingSpace]360-378.
+P. Schwille, in Fluorescence Correlation Spectroscopy, F. P. Schäfer, J. P. Toennies, W. Zinth, R. Rigler, E. S. Elson, Eds. (Springer Berlin Heidelberg, Berlin, Heidelberg, 2001), vol. 65, pp. 360-378.
 S. T. Hess, S. Huang, A. A. Heikal, W. W. Webb, Biological and chemical applications of fluorescence correlation spectroscopy: a review. Biochemistry. 41, 697-705 (2002).
 S. T. Hess, W. W. Webb, Focal volume optics and experimental artifacts in confocal fluorescence correlation spectroscopy. Biophys J. 83, 2300-2317 (2002).
 *)
@@ -354,7 +347,6 @@ Range@Length@cfmP[iPerModel]]],
 Keys[cfmP]]
 ];
 
-
 SetAttributes[fShowCorrPlotsWithFit,HoldFirst];(* to be able to AssociateTo corrdata to metadata *)
 fShowCorrPlotsWithFit[metadata_]:=
 Module[{traces, fitModel, corrdat, error, corrdatwitherrors, plotStyles, plotDataAndFit, plotFitResiduals, params, fitParams, grids},
@@ -367,7 +359,7 @@ corrdat = fitModel["Data"];
 error = metadata["SEM"];
 corrdatwitherrors = Transpose[{corrdat[[All,1]],Around[#[[1]],#[[2]]]&/@Transpose[{corrdat[[All,2]],error}]}];
 
-plotStyles = {Frame -> True, FrameLabel -> {"\[Tau] (\[Micro]s)", "G(\[Tau])"}};
+plotStyles = {Frame -> True, FrameLabel -> {"\[Tau] (µs)", "G(\[Tau])"}};
 plotDataAndFit = Show[
 ListLogLinearPlot[traces,
 PlotStyle -> {Gray}, PlotRange -> {All, {-0.02, Full}}, ImageSize -> 300, AspectRatio -> 1, LabelStyle -> {Black, 14}, plotStyles],
@@ -389,7 +381,6 @@ Frame -> All, Background -> {{LightGray, Yellow}, None}];
 Row[{plotDataAndFit, Column[{grids, plotFitResiduals}]}, Frame -> True]
 ];
 
-
 SetAttributes[fGetVolume, HoldFirst];
 fGetVolume[metadata_, Di_]:=
 Module[{SP, w0, Veff, result},
@@ -404,7 +395,6 @@ ClearAll[tauD1];
 AssociateTo[metadata, {"calVol" -> result, "vol" -> "Veff"/.result}]; result
 ];
 
-
 SetAttributes[fGetConcentration, HoldFirst];
 fGetConcentration[metadata_, cal_]:=
 Module[{n1, Veff, c1},
@@ -417,7 +407,6 @@ AssociateTo[metadata, {"N1" -> n1, "c1" -> c1, "G1" -> 1/n1}];
 {n1, c1}
 ];
 
-
 SetAttributes[fGetBrightness, HoldFirst];
 fGetBrightness[assSample_, assBG_, channel_]:=
 Module[{brightness},
@@ -426,7 +415,6 @@ If[metadata === 0, Return[0]];
 brightness = (assSample[channel] - assBG[channel])/(assSample["N1"]);
 AssociateTo[assSample, {"cpm" -> brightness}]; brightness
 ];
-
 
 SetAttributes[fGetD, HoldFirst];
 fGetD[metadata_, cal_]:=
@@ -439,12 +427,10 @@ AssociateTo[metadata, Ds];
 Ds
 ];
 
-
 (*PicoQuant application note: Absolute Diffusion Coefficients: Compilation of Reference Data for FCS Calibration*)
 ViscosityOfWater[T_(*temperature in Kelvin*)] := 2.414*^-5*10^(247.8/(T - 140));
 StokesEinstein[T_(*temperature in Kelvin*), shape_(*6*Pi for sphere; 12 for disk*), r_(*hydrodynamic radius*)] := (1.38065*10^-23*T)/(shape*ViscosityOfWater[T]*r);
 DatT[Di_(*diffusion coefficient at 298.15 K*), T_(*diffusion coefficient at T*)] := Di*(T/298.15)*(ViscosityOfWater[298.15]/ViscosityOfWater[T]);
-
 
 fApplyThreshold[metadata_, route_, t1_, bin_, r_, thr_] := 
 Module[{n, dn, dnints, intervals},
@@ -456,25 +442,146 @@ FDeleteTTTRTimeInterval[intervals, FCloseGap -> True];
 FTimeTrace[route, bin, {0, t1}, FOutput -> FGraph, PlotTheme -> "Detailed"]
 ];
 
-
-fImages[fileName_, images_List] := 
+fFirstImage[fileName_, images_List] := 
 Module[{metadata, imgs, commonMatrixStyle, row, string, imgD1, imgD2, imgL1D2, imgL2D1, imgL2D2, imgL1D1},
 metadata = fSetupAnalysis[fileName];
 If[metadata == 0, Return[0]];
-(*Are we looking at an image, i.e. a multidimensional object?*)
 If[metadata["dimensions"] <= 1, Return[]];
 
 imgs = {};
 commonMatrixStyle = {LabelStyle -> Black, ImageSize -> 100*72/25.4, ColorFunction -> Hue, PlotLegends -> Automatic};
-If[MemberQ[images, "D2"], AppendTo[imgs, MatrixPlot[FGetFromPiezoScan["n2"+"n2pie", 1], PlotLabel -> Style["D2", {14, Blue}], commonMatrixStyle]]];
-If[MemberQ[images, "D1"], AppendTo[imgs, MatrixPlot[FGetFromPiezoScan["n1"+"n1pie", 1], PlotLabel -> Style["D1", {14, Red}], commonMatrixStyle]]];
-If[MemberQ[images, "L1D2"], AppendTo[imgs, MatrixPlot[FGetFromPiezoScan["n2", 1], PlotLabel -> Style["L1D2", {14, Blue}], commonMatrixStyle]]];
-If[MemberQ[images, "L2D1"], AppendTo[imgs, MatrixPlot[FGetFromPiezoScan["n1pie", 1], PlotLabel -> Style["L2D1", {14, Red}], commonMatrixStyle]]];
-If[MemberQ[images, "L2D2"], AppendTo[imgs, MatrixPlot[FGetFromPiezoScan["n2pie", 1], PlotLabel -> Style["L2D2", {14, Blue}], commonMatrixStyle]]];
-If[MemberQ[images, "L1D1"], AppendTo[imgs, MatrixPlot[FGetFromPiezoScan["n1", 1], PlotLabel -> Style["L1D1", {14, Red}], commonMatrixStyle]]];
 
-string = "File: " <> fileName <> "; active lasers: " <> StringRiffle[Keys@Select[KeyTake[{"485V", "485H", "560V", "640V", "640H"}][metadata], # == 1 &], ", "] <> "; Dimensions: " <> ToString@metadata["PixX"] <> " px \[Times]" <> ToString@metadata["PixY"] <> " px; resolution: " <> ToString@Round[metadata["PixResol"], 0.001] <> " \[Micro]m/px; Dimensions: " <> ToString@Round[metadata["PixX"]*metadata["PixResol"], 0.1] <> " \[Micro]m \[Times]" <> ToString@Round[metadata["PixY"]*metadata["PixResol"], 0.1] <> " \[Micro]m; dwell time: " <> ToString[metadata["TimePerPixel"]*1000] <> " \[Micro]s";
+fAppendSelection[image_, expr_]:= 
+If[MemberQ[images, image],
+AppendTo[imgs, Evaluate[MatrixPlot[FGetFromPiezoScan[expr, 1], 
+PlotLabel -> Style[image, {14, Blue}], commonMatrixStyle]]];];
+
+fAppendSelection["D2", "n2"+"n2pie"];
+fAppendSelection["D1", "n1"+"n1pie"];
+fAppendSelection["L1D2", "n2"];
+fAppendSelection["L2D1", "n1pie"];
+fAppendSelection["L2D2", "n2pie"];
+fAppendSelection["L1D1", "n1"];
+
+string = "File: " <> fileName <> "; active lasers: " <> StringRiffle[Keys@Select[KeyTake[{"485V", "485H", "560V", "640V", "640H"}][metadata], # == 1 &], ", "] <> "; Dimensions: " <> ToString@metadata["PixX"] <> "\[Times]" <> ToString@metadata["PixY"] <> " px; resolution: " <> ToString@Round[metadata["PixResol"], 0.001] <> " µm/px; Dimensions: " <> ToString@Round[metadata["PixX"]*metadata["PixResol"], 0.1] <> "\[Times]" <> ToString@Round[metadata["PixY"]*metadata["PixResol"], 0.1] <> " µm; dwell time: " <> ToString[metadata["TimePerPixel"]*1000] <> " µs; frames: "<>ToString@nFrames;
 Print@string;
 
 Row[imgs, "  ", Frame -> True]
 ];
+
+fImagesMean[fileName_, images_List] := 
+Module[{metadata, imgs, commonMatrixStyle, row, string, imgD1, imgD2, imgL1D2, imgL2D1, imgL2D2, imgL1D1, nFrames, nPixY, mean},
+metadata = fSetupAnalysis[fileName];
+If[metadata == 0, Return[0]];
+If[metadata["dimensions"] <= 1, Return[]];
+
+nFrames = metadata["nFrames"];
+nPixY = metadata["PixY"];
+
+imgs = {};
+commonMatrixStyle = {LabelStyle -> Black, ImageSize -> 100*72/25.4, ColorFunction -> Hue, PlotLegends -> Automatic};
+
+fAppendSelection[image_, expr_]:= 
+If[MemberQ[images, image],
+mean = Mean[FGetFromPiezoScan[expr, #] &/@ Range@(nFrames-1)];
+AppendTo[imgs, Evaluate[MatrixPlot[mean, PlotLabel -> Style[image, 14], commonMatrixStyle]]];
+Clear[mean];];
+
+fAppendSelection["D2", "n2"+"n2pie"];
+fAppendSelection["D1", "n1"+"n1pie"];
+fAppendSelection["L1D2", "n2"];
+fAppendSelection["L2D1", "n1pie"];
+fAppendSelection["L2D2", "n2pie"];
+fAppendSelection["L1D1", "n1"];
+
+string = "File: " <> fileName <> "; active lasers: " <> StringRiffle[Keys@Select[KeyTake[{"485V", "485H", "560V", "640V", "640H"}][metadata], # == 1 &], ", "] <> "; Dimensions: " <> ToString@metadata["PixX"] <> "\[Times]" <> ToString@metadata["PixY"] <> " px; resolution: " <> ToString@Round[metadata["PixResol"], 0.001] <> " µm/px; Dimensions: " <> ToString@Round[metadata["PixX"]*metadata["PixResol"], 0.1] <> "\[Times]" <> ToString@Round[metadata["PixY"]*metadata["PixResol"], 0.1] <> " µm; dwell time: " <> ToString[metadata["TimePerPixel"]*1000] <> " µs; frames: "<>ToString@nFrames;
+Print@string;
+
+Row[imgs, "  ", Frame -> True]
+];
+
+SetAttributes[fGraphLifetimeHistograms,HoldFirst];
+fGraphLifetimeHistograms[metadata_]:=(
+Module[{hD1,hD2,hD1L1,hD2L1,hD1L2,hD2L2,opts},
+
+AmplNorm[dat:{{_,_}..}]:={dat[[All,1]],dat[[All,2]]/Max[dat[[All,2]]]}\[Transpose];
+AmplNorm[dat:{{{_,_}..}..}]:=AmplNorm/@dat;
+
+hD1=AmplNorm[{metadata["hD1"][[All,1]],metadata["hD1"][[All,2]]}\[Transpose]];
+hD2=AmplNorm[{metadata["hD2"][[All,1]],metadata["hD2"][[All,2]]}\[Transpose]];
+
+If[metadata["pulseCfg"] == PIE,
+hD1L1=AmplNorm[{metadata["hD1L1"][[All,1]],metadata["hD1L1"][[All,2]]}\[Transpose]];
+hD2L1=AmplNorm[{metadata["hD2L1"][[All,1]],metadata["hD2L1"][[All,2]]}\[Transpose]];
+hD1L2=AmplNorm[{metadata["hD1L2"][[All,1]],metadata["hD1L2"][[All,2]]}\[Transpose]];
+hD2L2=AmplNorm[{metadata["hD2L2"][[All,1]],metadata["hD2L2"][[All,2]]}\[Transpose]];
+];
+
+opts={ImageSize->100*72/25.4,Frame->True,FrameLabel->{"time (ns)"},LabelStyle->{Black}};
+{ListLogPlot[hD1,PlotStyle->{Black},opts,PlotRange->All,PlotLabel -> Style["D1", 14]],
+ListLogPlot[hD2,PlotStyle->{Black},opts,PlotRange->All,PlotLabel -> Style["D2", 14]]}
+
+]);
+
+SetAttributes[fFitLifetimeHistogram,HoldFirst];
+fFitLifetimeHistogram[metadata_,histogram_,range_,nexp_]:=(
+Module[{data,fitdata,opts,model,symbols,c1,c2,c3,modelwithconstraints,g1,g2,guess,fit,fitparams,pfit,presiduals,grids,fmodel},
+
+AmplNorm[dat:{{_,_}..}]:={dat[[All,1]],dat[[All,2]]/Max[dat[[All,2]]]}\[Transpose];
+AmplNorm[dat:{{{_,_}..}..}]:=AmplNorm/@dat;
+
+data=metadata[histogram];
+data=AmplNorm[data];
+
+fitdata=Select[data,range[[1]]<#[[1]]<range[[2]]&];
+fitdata={fitdata[[All,1]]-range[[1]],fitdata[[All,2]]}\[Transpose];
+
+Clear[fmodel,n];
+fmodel[n_]:=Itot*Sum[Symbol["a"<>ToString@i]*Exp[-t/Symbol["tau"<>ToString@i]],{i,1,n}]+Ibg;
+model=fmodel[nexp];
+
+getSymbols[model_]:=Cases[model,_Symbol?(!NumericQ[#]&),Infinity]//Union;
+symbols=getSymbols[model];
+symbols=getSymbols[model];
+symbols=SymmetricDifference[symbols,{t}];
+
+If[nexp==1,
+c1=(#>0)&/@symbols;
+c2=Sum[Symbol["a"<>ToString@i],{i,1,nexp}]==Itot;
+modelwithconstraints=Flatten[{model,c1,c2}];];
+
+If[nexp==2,
+c1=(#>0)&/@symbols;
+c2=Sum[Symbol["a"<>ToString@i],{i,1,nexp}]==Itot;
+c3={tau1>tau2};
+modelwithconstraints=Flatten[{model,c1,c2,c3}];];
+
+g1={{Itot,Max[fitdata[[All,2]]]},
+{Ibg,Mean@Take[Sort[fitdata[[All,2]]],-100]}};
+g2=SymmetricDifference[symbols,{Itot,Ibg}];
+guess=Join[g1,g2];
+
+fit=NonlinearModelFit[fitdata,
+modelwithconstraints,
+guess,
+{t},
+AccuracyGoal->Automatic,PrecisionGoal->Infinity];
+fitparams=Association[(fit["BestFitParameters"])];
+
+opts={PlotRange->All,Frame->True,FrameLabel->{"time (ns)","norm. amplitude"},LabelStyle->{Black}};
+
+pfit=Show[
+ListLogPlot[data,PlotStyle->Gray],
+ListLogPlot[{fitdata[[All,1]]+range[[1]],fitdata[[All,2]]}\[Transpose],opts,PlotStyle->{Blue}],
+LogPlot[fit["Function"][t-range[[1]]],{t,range[[1]],range[[2]]},PlotStyle->{Red}],
+ImageSize->300,AspectRatio->1,PlotRange->All
+];
+
+presiduals=ListPlot[{fitdata[[All,1]],fit["FitResiduals"]}\[Transpose],
+opts,PlotStyle->Black,ImageSize->200];
+
+grids=Grid[{Keys@fitparams,Values[fitparams]}\[Transpose],
+Frame->All,Background->{{LightGray,Yellow},None}];
+
+Row[{pfit,Column[{grids,presiduals}]},Frame->True,Alignment->Center]
+]);
