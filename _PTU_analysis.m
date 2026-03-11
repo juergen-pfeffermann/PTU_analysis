@@ -1,7 +1,7 @@
 FindFile["Fretica`"];
 Needs["Fretica`"];
 
-fSetupAnalysis[fileName_, boolHisto_: False] := 
+fSetupAnalysis[fileName_, boolHisto_: False] :=
 Module[{metadata, D1, D2, D12, activeLasers, channelsPerPulse, chsL1, chsL2, chsAll},
 If[Check[FOpenTTTR[fileName], $Failed] === $Failed, Return[0]];
 
@@ -90,7 +90,7 @@ metadata
 ];
 
 SetAttributes[fGetPhotonData, HoldFirst];
-fGetPhotonData[metadata_, boolHisto_] := 
+fGetPhotonData[metadata_, boolHisto_] :=
 Module[{startTime, stopTime, hD1, cD1, hD2, cD2, hD1L1, cD1L1, hD1L2, cD1L2, hD2L1, cD2L1, hD2L2, cD2L2, assSTD, assPIE, assoc},
 If[metadata === 0, Return[0]];
 
@@ -151,7 +151,7 @@ assoc
 
 SetAttributes[fGetCorrData, HoldFirst];
 fGetCorrData[metadata_, log10taumin_, interval_, correlation_] := fGetCorrData[metadata, log10taumin, 0., interval, correlation];
-fGetCorrData[metadata_, log10taumin_, log10taumax_, interval_, correlation_] := 
+fGetCorrData[metadata_, log10taumin_, log10taumax_, interval_, correlation_] :=
 Module[{startTime, stopTime, chs, num, weights, wl1, wl2, wl12, D1, D2, D12, chsL1, chsL2, chsAll, intervals, corrdata, CCtotal, CCinterval, meanCCinterval, SD, SEM},
 If[metadata === 0, Return[0]];
 If[StringQ[metadata["corr"]], KeyDrop[metadata, {metadata["corr"], "corr", "CCtotal", "mean", "SD", "SEM"}]];
@@ -269,7 +269,7 @@ AssociateTo[metadata, {
 ClearAll[SP, fitdata, params, fitparams];
 ];
 
-(* 
+(*
 Correlation fit models, parameters, constraints and parameter guesses
 P. Schwille, in Fluorescence Correlation Spectroscopy, F. P. Schäfer, J. P. Toennies, W. Zinth, R. Rigler, E. S. Elson, Eds. (Springer Berlin Heidelberg, Berlin, Heidelberg, 2001), vol. 65, pp. 360-378.
 S. T. Hess, S. Huang, A. A. Heikal, W. W. Webb, Biological and chemical applications of fluorescence correlation spectroscopy: a review. Biochemistry. 41, 697-705 (2002).
@@ -359,7 +359,7 @@ corrdat = fitModel["Data"];
 error = metadata["SEM"];
 corrdatwitherrors = Transpose[{corrdat[[All,1]],Around[#[[1]],#[[2]]]&/@Transpose[{corrdat[[All,2]],error}]}];
 
-plotStyles = {Frame -> True, FrameLabel -> {"\[Tau] (µs)", "G(\[Tau])"}};
+plotStyles = {Frame -> True, FrameLabel -> {"\[Tau] (\[Micro]s)", "G(\[Tau])"}};
 plotDataAndFit = Show[
 ListLogLinearPlot[traces,
 PlotStyle -> {Gray}, PlotRange -> {All, {-0.02, Full}}, ImageSize -> 300, AspectRatio -> 1, LabelStyle -> {Black, 14}, plotStyles],
@@ -403,7 +403,7 @@ ClearAll[G1];
 n1 = 1/(G1 /. metadata["fitparams"]);
 Veff = cal["vol"];
 c1 = n1/Veff/6.022*^23*1.*^15;
-AssociateTo[metadata, {"N1" -> n1, "c1" -> c1, "G1" -> 1/n1}]; 
+AssociateTo[metadata, {"N1" -> n1, "c1" -> c1, "G1" -> 1/n1}];
 {n1, c1}
 ];
 
@@ -432,7 +432,7 @@ ViscosityOfWater[T_(*temperature in Kelvin*)] := 2.414*^-5*10^(247.8/(T - 140));
 StokesEinstein[T_(*temperature in Kelvin*), shape_(*6*Pi for sphere; 12 for disk*), r_(*hydrodynamic radius*)] := (1.38065*10^-23*T)/(shape*ViscosityOfWater[T]*r);
 DatT[Di_(*diffusion coefficient at 298.15 K*), T_(*diffusion coefficient at T*)] := Di*(T/298.15)*(ViscosityOfWater[298.15]/ViscosityOfWater[T]);
 
-fApplyThreshold[metadata_, route_, t1_, bin_, r_, thr_] := 
+fApplyThreshold[metadata_, route_, t1_, bin_, r_, thr_] :=
 Module[{n, dn, dnints, intervals},
 n = FTimeTrace[route, bin, {0, t1}, FOutput -> FData];
 dn = Select[n, #[[2]] > thr &];
@@ -442,7 +442,7 @@ FDeleteTTTRTimeInterval[intervals, FCloseGap -> True];
 FTimeTrace[route, bin, {0, t1}, FOutput -> FGraph, PlotTheme -> "Detailed"]
 ];
 
-fFirstImage[fileName_, images_List] := 
+fFirstImage[fileName_, images_List] :=
 Module[{metadata, imgs, commonMatrixStyle, row, string, imgD1, imgD2, imgL1D2, imgL2D1, imgL2D2, imgL1D1},
 metadata = fSetupAnalysis[fileName];
 If[metadata == 0, Return[0]];
@@ -451,9 +451,9 @@ If[metadata["dimensions"] <= 1, Return[]];
 imgs = {};
 commonMatrixStyle = {LabelStyle -> Black, ImageSize -> 100*72/25.4, ColorFunction -> Hue, PlotLegends -> Automatic};
 
-fAppendSelection[image_, expr_]:= 
+fAppendSelection[image_, expr_]:=
 If[MemberQ[images, image],
-AppendTo[imgs, Evaluate[MatrixPlot[FGetFromPiezoScan[expr, 1], 
+AppendTo[imgs, Evaluate[MatrixPlot[FGetFromPiezoScan[expr, 1],
 PlotLabel -> Style[image, {14, Blue}], commonMatrixStyle]]];];
 
 fAppendSelection["D2", "n2"+"n2pie"];
@@ -469,7 +469,7 @@ Print@string;
 Row[imgs, "  ", Frame -> True]
 ];
 
-fImagesMean[fileName_, images_List] := 
+fImagesMean[fileName_, images_List] :=
 Module[{metadata, imgs, commonMatrixStyle, row, string, imgD1, imgD2, imgL1D2, imgL2D1, imgL2D2, imgL1D1, nFrames, nPixY, mean},
 metadata = fSetupAnalysis[fileName];
 If[metadata == 0, Return[0]];
@@ -481,7 +481,7 @@ nPixY = metadata["PixY"];
 imgs = {};
 commonMatrixStyle = {LabelStyle -> Black, ImageSize -> 100*72/25.4, ColorFunction -> Hue, PlotLegends -> Automatic};
 
-fAppendSelection[image_, expr_]:= 
+fAppendSelection[image_, expr_]:=
 If[MemberQ[images, image],
 mean = Mean[FGetFromPiezoScan[expr, #] &/@ Range@(nFrames-1)];
 AppendTo[imgs, Evaluate[MatrixPlot[mean, PlotLabel -> Style[image, 14], commonMatrixStyle]]];
