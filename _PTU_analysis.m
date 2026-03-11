@@ -157,7 +157,7 @@ If[metadata === 0, Return[0]];
 If[StringQ[metadata["corr"]], KeyDrop[metadata, {metadata["corr"], "corr", "CCtotal", "mean", "SD", "SEM"}]];
 
 (*Update data on counts, countrates, etc. after cutting.*)
-AssociateTo[metadata, fGetPhotonData[metadata]];
+AssociateTo[metadata, fGetPhotonData[metadata, False]];(*20260226: temporary fix only!*)
 
 (*Lets not autocorrelate images.*)
 If[metadata["dimensions"] > 1, Print["This is not a time trace."]; Return[0]];
@@ -271,7 +271,7 @@ ClearAll[SP, fitdata, params, fitparams];
 
 (* 
 Correlation fit models, parameters, constraints and parameter guesses
-P. Schwille, in Fluorescence Correlation Spectroscopy, F. P. Schäfer, J. P. Toennies, W. Zinth, R. Rigler, E. S. Elson, Eds. (Springer Berlin Heidelberg, Berlin, Heidelberg, 2001), vol. 65, pp. 360-378.
+P. Schwille, in Fluorescence Correlation Spectroscopy, F. P. Schäfer, J. P. Toennies, W. Zinth, R. Rigler, E. S. Elson, Eds. (Springer Berlin Heidelberg, Berlin, Heidelberg, 2001), vol. 65, pp. 360-378.
 S. T. Hess, S. Huang, A. A. Heikal, W. W. Webb, Biological and chemical applications of fluorescence correlation spectroscopy: a review. Biochemistry. 41, 697-705 (2002).
 S. T. Hess, W. W. Webb, Focal volume optics and experimental artifacts in confocal fluorescence correlation spectroscopy. Biophys J. 83, 2300-2317 (2002).
 *)
