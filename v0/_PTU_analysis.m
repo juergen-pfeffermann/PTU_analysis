@@ -2,10 +2,10 @@ FindFile["Fretica`"];
 Needs["Fretica`"];
 
 fSetupAnalysis[fileName_, boolHisto_: False] :=
-Module[{metadata, D1, D2, D12, activeLasers, channelsPerPulse, chsL1, chsL2, chsAll},
+Module[{headerString, metadata, D1, D2, D12, activeLasers, channelsPerPulse, chsL1, chsL2, chsAll},
 If[Check[FOpenTTTR[fileName], $Failed] === $Failed, Return[0]];
 
-fGetStringFromHeader[s_String] := ToExpression[StringCases[FShowHeader[], s ~~ Whitespace ~~ ":" ~~ Whitespace ~~ v : WordCharacter .. -> v][[1]]];
+(*fGetStringFromHeader[headerString_String] := ToExpression[StringCases[FShowHeader[], headerString ~~ Whitespace ~~ ":" ~~ Whitespace ~~ v : WordCharacter .. -> v][[1]]];*)(*function deprecated because Fretica fixed a bug with FGetFromHeader*)
 
 (* Laser configuration. *)
 metadata = Association[
@@ -21,7 +21,7 @@ metadata = Association[
 (*FGetFromHeader extracts only integer part of BaseOscFreq. Mind when working with low frequencies!*)
 "clockSyncRate" -> FGetFromHeader["Sep2_SOM_100_BaseOscFreq"]/FGetFromHeader["Sep2_SOM_100_Divider"],
 "channelWidth" -> FGetFromHeader["HW_BaseResolution"],
-"pulseCfg" -> fGetStringFromHeader["UsrPulseCfg"],
+"pulseCfg" -> ToExpression[FGetFromHeader["UsrPulseCfg"]],(*fGetStringFromHeader["UsrPulseCfg"]*)
 (*Dimensions*)
 "dimensions" -> FGetFromHeader["ImgHdr_Dimensions"],
 "UsrPowerDiode" -> FGetFromHeader["UsrPowerDiode"]
@@ -90,7 +90,7 @@ metadata
 ];
 
 SetAttributes[fGetPhotonData, HoldFirst];
-fGetPhotonData[metadata_, boolHisto_] :=
+fGetPhotonData[metadata_, boolHisto_: False] :=
 Module[{startTime, stopTime, hD1, cD1, hD2, cD2, hD1L1, cD1L1, hD1L2, cD1L2, hD2L1, cD2L1, hD2L2, cD2L2, assSTD, assPIE, assoc},
 If[metadata === 0, Return[0]];
 
@@ -157,7 +157,7 @@ If[metadata === 0, Return[0]];
 If[StringQ[metadata["corr"]], KeyDrop[metadata, {metadata["corr"], "corr", "CCtotal", "mean", "SD", "SEM"}]];
 
 (*Update data on counts, countrates, etc. after cutting.*)
-AssociateTo[metadata, fGetPhotonData[metadata, False]];(*20260226: temporary fix only!*)
+AssociateTo[metadata, fGetPhotonData[metadata]];
 
 (*Lets not autocorrelate images.*)
 If[metadata["dimensions"] > 1, Print["This is not a time trace."]; Return[0]];
@@ -199,6 +199,8 @@ If[correlation == "AC1211FFCS", AC1211FFCS = fGetCCFFCS[D1, D2, chsL1, chsL1];];
 If[correlation == "AC1222FFCS", AC1222FFCS = fGetCCFFCS[D1, D2, chsL2, chsL2];];
 If[correlation == "AC12FFCS", AC12FFCS = fGetCCFFCS[D1, D2, chsAll, chsAll];];
 If[correlation == "AC21FFCS", AC21FFCS = fGetCCFFCS[D2, D1, chsAll, chsAll];];
+If[correlation == "AC11FFCS", AC11FFCS = fGetCCFFCS[D1, D1, chsAll, chsAll];];
+If[correlation == "AC22FFCS", AC22FFCS = fGetCCFFCS[D2, D2, chsAll, chsAll];];
 If[correlation == "AC2211FFCS", AC2211FFCS = fGetCCFFCS[D2, D2, chsL1, chsL1];];
 If[correlation == "AC1122FFCS", AC1122FFCS = fGetCCFFCS[D1, D1, chsL2, chsL2];];
 If[correlation == "CC1221FFCS", CC1221FFCS = fGetCCFFCS[D1, D2, chsL2, chsL1];];
@@ -463,7 +465,7 @@ fAppendSelection["L2D1", "n1pie"];
 fAppendSelection["L2D2", "n2pie"];
 fAppendSelection["L1D1", "n1"];
 
-string = "File: " <> fileName <> "; active lasers: " <> StringRiffle[Keys@Select[KeyTake[{"485V", "485H", "560V", "640V", "640H"}][metadata], # == 1 &], ", "] <> "; Dimensions: " <> ToString@metadata["PixX"] <> "\[Times]" <> ToString@metadata["PixY"] <> " px; resolution: " <> ToString@Round[metadata["PixResol"], 0.001] <> " µm/px; Dimensions: " <> ToString@Round[metadata["PixX"]*metadata["PixResol"], 0.1] <> "\[Times]" <> ToString@Round[metadata["PixY"]*metadata["PixResol"], 0.1] <> " µm; dwell time: " <> ToString[metadata["TimePerPixel"]*1000] <> " µs; frames: "<>ToString@nFrames;
+string = "File: " <> fileName <> "; active lasers: " <> StringRiffle[Keys@Select[KeyTake[{"485V", "485H", "560V", "640V", "640H"}][metadata], # == 1 &], ", "] <> "; Dimensions: " <> ToString@metadata["PixX"] <> "\[Times]" <> ToString@metadata["PixY"] <> " px; resolution: " <> ToString@Round[metadata["PixResol"], 0.001] <> " \[Micro]m/px; Dimensions: " <> ToString@Round[metadata["PixX"]*metadata["PixResol"], 0.1] <> "\[Times]" <> ToString@Round[metadata["PixY"]*metadata["PixResol"], 0.1] <> " \[Micro]m; dwell time: " <> ToString[metadata["TimePerPixel"]*1000] <> " \[Micro]s; frames: "<>ToString@nFrames;
 Print@string;
 
 Row[imgs, "  ", Frame -> True]
@@ -494,7 +496,7 @@ fAppendSelection["L2D1", "n1pie"];
 fAppendSelection["L2D2", "n2pie"];
 fAppendSelection["L1D1", "n1"];
 
-string = "File: " <> fileName <> "; active lasers: " <> StringRiffle[Keys@Select[KeyTake[{"485V", "485H", "560V", "640V", "640H"}][metadata], # == 1 &], ", "] <> "; Dimensions: " <> ToString@metadata["PixX"] <> "\[Times]" <> ToString@metadata["PixY"] <> " px; resolution: " <> ToString@Round[metadata["PixResol"], 0.001] <> " µm/px; Dimensions: " <> ToString@Round[metadata["PixX"]*metadata["PixResol"], 0.1] <> "\[Times]" <> ToString@Round[metadata["PixY"]*metadata["PixResol"], 0.1] <> " µm; dwell time: " <> ToString[metadata["TimePerPixel"]*1000] <> " µs; frames: "<>ToString@nFrames;
+string = "File: " <> fileName <> "; active lasers: " <> StringRiffle[Keys@Select[KeyTake[{"485V", "485H", "560V", "640V", "640H"}][metadata], # == 1 &], ", "] <> "; Dimensions: " <> ToString@metadata["PixX"] <> "\[Times]" <> ToString@metadata["PixY"] <> " px; resolution: " <> ToString@Round[metadata["PixResol"], 0.001] <> " \[Micro]m/px; Dimensions: " <> ToString@Round[metadata["PixX"]*metadata["PixResol"], 0.1] <> "\[Times]" <> ToString@Round[metadata["PixY"]*metadata["PixResol"], 0.1] <> " \[Micro]m; dwell time: " <> ToString[metadata["TimePerPixel"]*1000] <> " \[Micro]s; frames: "<>ToString@nFrames;
 Print@string;
 
 Row[imgs, "  ", Frame -> True]
